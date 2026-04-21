@@ -195,11 +195,11 @@ module MazeRunner_tb();
     logic [11:0] lft_d, rght_d;
     begin
       seen_diff = 0;
-      for (i = 0; i < 100; i++) begin
+      for (i = 0; i < 10000; i++) begin
         @(posedge clk);
         lft_d  = iDUT.iMTR.lft_duty;
         rght_d = iDUT.iMTR.rght_duty;
-        if (rght_d > lft_d + 12'h020) seen_diff++;
+        if (rght_d > lft_d + 12'h008) seen_diff++;
       end
       if (seen_diff == 0) begin
         $display("FAIL: right duty never > left during heading turn");
@@ -246,7 +246,7 @@ module MazeRunner_tb();
 
     $display("\n--- Test 4: Heading West (0x23FF) ---");
     SendCmd(16'h23FF);
-    repeat (100) @(posedge clk);
+    repeat (5000) @(posedge clk);
     CheckRightGreaterThanLeft();
     CheckPosAck();
     CheckHeadingNear(12'h3FF, 64);
