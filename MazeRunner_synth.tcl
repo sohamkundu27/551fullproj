@@ -1,0 +1,117 @@
+# MazeRunner_synth.tcl
+# Synopsys Design Compiler synthesis script for ECE 551 MazeRunner project.
+# Target: standard cell library, 400 MHz (2.75 ns period).
+# compile_ultra is NOT used per project spec.
+# Area should be measured after hierarchy is smashed.
+# Reference area = 16591. Goal is to beat it.
+# Soham Kundu / Group: Bhanu Kankanala, Arnav Mohanty, Soham Kundu, Mohnish Nanthakumar
+
+# ---------------------------------------------------------------
+# 1. Read all design files (synthesizable only — no TB, no models)
+# ---------------------------------------------------------------
+read_file -format sverilog {
+  reset_synch.sv
+  UART_tx.sv
+  UART_rx.sv
+  UART.sv
+  UART_wrapper.sv
+  cmd_proc.sv
+  maze_solve.sv
+  navigate_shell.sv
+  IR_Math.sv
+  PID.sv
+  DutyScaleROM.sv
+  PWM12.sv
+  MtrDrv.sv
+  inertial_integrator.sv
+  SPI_main.sv
+  SPI_mnrch.sv
+  inert_intf.sv
+  PWM8.sv
+  A2D_intf.sv
+  sensor_intf.sv
+  piezo_drv.sv
+  MazeRunner.sv
+}
+
+# ---------------------------------------------------------------
+# 2. Set the top-level design
+# ---------------------------------------------------------------
+set current_design MazeRunner
+
+# ---------------------------------------------------------------
+# 3. Link the design (resolve all module references)
+# ---------------------------------------------------------------
+link
+
+# ---------------------------------------------------------------
+# 4. Clock definition
+#    Period = 2.75 ns  (400 MHz target; spec says 363 MHz / 2.75 ns)
+# ---------------------------------------------------------------
+create_clock -name "clk" -period 2.75 [get_ports clk]
+
+# Clock uncertainty (jitter + skew budget)
+set_clock_uncertainty 0.125 [get_clocks clk]
+
+# ---------------------------------------------------------------
+# 5. Input / output timing constraints
+# ---------------------------------------------------------------
+# All inputs arrive 0.6 ns after clock rise
+set_input_delay  0.6 -clock clk [remove_from_collection [all_inputs] [get_ports clk]]
+
+# All outputs must be stable 0.5 ns before next clock rise
+set_output_delay 0.5 -clock clk [all_outputs]
+
+# ---------------------------------------------------------------
+# 6. Drive strength and load
+#    Drive: equivalent to size-2 2-input NAND from our library
+#    Load:  0.1 pF on all outputs
+# ---------------------------------------------------------------
+set_driving_cell -lib_cell NAND2_X2 [remove_from_collection [all_inputs] [get_ports clk]]
+set_load         0.1                [all_outputs]
+
+# ---------------------------------------------------------------
+# 7. Wireload model
+# ---------------------------------------------------------------
+set_wire_load_model -name 16000 -library saed14rvt_ss0p75vn40c
+
+# ---------------------------------------------------------------
+# 8. Max transition time
+# ---------------------------------------------------------------
+set_max_transition 0.125 [current_design]
+
+# ---------------------------------------------------------------
+# 9. Compile  (compile_ultra is FORBIDDEN per spec)
+# ---------------------------------------------------------------
+compile -map_effort medium
+
+# ---------------------------------------------------------------
+# 10. Smash hierarchy — area must be reported after this
+# ---------------------------------------------------------------
+ungroup -all -flatten
+
+# ---------------------------------------------------------------
+# 11. Second compile pass after flattening (improves area)
+# ---------------------------------------------------------------
+compile -map_effort medium
+
+# ---------------------------------------------------------------
+# 12. Timing and area reports
+# ---------------------------------------------------------------
+report_timing  > MazeRunner_timing.rpt
+report_area    > MazeRunner_area.rpt
+
+# Print area to transcript so it is visible during demo
+report_area
+
+# ---------------------------------------------------------------
+# 13. Write gate-level netlist
+# ---------------------------------------------------------------
+write -format verilog -hierarchy -output MazeRunner.vg
+
+# ---------------------------------------------------------------
+# 14. Write SDF for post-synthesis simulation
+# ---------------------------------------------------------------
+write_sdf MazeRunner.sdf
+
+exit
