@@ -190,22 +190,25 @@ module MazeRunner_tb();
     end
   endtask
 
-  task automatic CheckRightGreaterThanLeft();
-    int i, seen_diff;
-    logic [11:0] lft_d, rght_d;
+  task automatic CheckHeadingTurnDirection();
+    logic signed [11:0] lft, rght;
     begin
-      seen_diff = 0;
-      for (i = 0; i < 10000; i++) begin
-        @(posedge clk);
-        lft_d  = iDUT.iMTR.lft_duty;
-        rght_d = iDUT.iMTR.rght_duty;
-        if (rght_d > lft_d + 12'h008) seen_diff++;
-      end
-      if (seen_diff == 0) begin
-        $display("FAIL: right duty never > left during heading turn");
+      // Sample speeds after PID has had time to respond
+      repeat (50000) @(posedge clk);
+      lft  = iDUT.lft_spd;
+      rght = iDUT.rght_spd;
+      $display("[%0t] moving=%b lft_spd=%0d rght_spd=%0d lft_duty=0x%03h rght_duty=0x%03h",
+               $time, iDUT.moving, lft, rght,
+               iDUT.iMTR.lft_duty, iDUT.iMTR.rght_duty);
+      if (!iDUT.moving) begin
+        $display("FAIL: moving not asserted during heading turn");
         $stop;
       end
-      $display("[%0t] PASS: right duty exceeded left (%0d samples)", $time, seen_diff);
+      if (!(lft < 0 && rght > 0)) begin
+        $display("FAIL: expected lft_spd<0 and rght_spd>0 for CCW turn, got lft=%0d rght=%0d", lft, rght);
+        $stop;
+      end
+      $display("[%0t] PASS: heading turn direction correct (lft=%0d rght=%0d)", $time, lft, rght);
     end
   endtask
 
@@ -246,8 +249,16 @@ module MazeRunner_tb();
 
     $display("\n--- Test 4: Heading West (0x23FF) ---");
     SendCmd(16'h23FF);
-    repeat (5000) @(posedge clk);
-    CheckRightGreaterThanLeft();
+    repeat (50000) @(posedge clk);
+    $display("moving=%b at_hdng=%b frwrd_spd=%0d",
+             iDUT.moving, iDUT.at_hdng, iDUT.frwrd_spd);
+    $display("actl_hdng=%0d dsrd_hdng=%0d",
+             iDUT.actl_hdng, iDUT.iCMD.dsrd_hdng);
+    $display("lft_spd=%0d rght_spd=%0d",
+             iDUT.lft_spd, iDUT.rght_spd);
+    $display("lft_duty=0x%03h rght_duty=0x%03h",
+             iDUT.iMTR.lft_duty, iDUT.iMTR.rght_duty);
+    CheckHeadingTurnDirection();
     CheckPosAck();
     CheckHeadingNear(12'h3FF, 64);
 
