@@ -1,6 +1,6 @@
 module A2D_intf(clk,rst_n,strt_cnv,cnv_cmplt,chnnl,res,SS_n,SCLK,MOSI,MISO);
 
-  input clk,rst_n;			// 50MHz clock and active low asynch reset
+  input clk,rst_n;			// 50MHz clock and active low asynch reset.
   input strt_cnv;			// initiates an A2D conversion
   input [2:0] chnnl;		// channel to perform conversion on
   input MISO;				// Serial input from A2D (Main In Secondary Out)
