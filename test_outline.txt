@@ -1,0 +1,106 @@
+ECE 551 — MazeRunner Project
+Test Suite Outline
+Group Members: Bhanu Kankanala, Arnav Mohanty, Soham Kundu, Mohnish Nanthakumar
+================================================================================
+
+OVERVIEW
+--------
+All tests are run in MazeRunner_tb.sv using RemoteComm to send 16-bit commands
+and RunnerPhysics to model the physical robot and maze. FAST_SIM=1 is set at
+the MazeRunner toplevel to keep simulation time reasonable. Each test is
+self-checking with timeouts that report FAIL and call $stop if something goes
+wrong. Tests run sequentially — each builds on the state left by the previous.
+
+
+TEST 1: PWM Midrail Check
+--------------------------
+What it does: Immediately after reset, samples lft_duty and rght_duty inside
+MtrDrv before any command is sent.
+
+What it checks: Both duty cycles are within the range 0x7E0–0x820 (midrail,
+~0x800). This confirms that with lft_spd and rght_spd both zero at reset, the
+motor driver produces a neutral PWM output and the robot will not move.
+
+Signals checked: iDUT.iMTR.lft_duty, iDUT.iMTR.rght_duty
+
+
+TEST 2: NEMO Setup
+-------------------
+What it does: Waits for iPHYS.iNEMO.NEMO_setup to assert, which happens only
+after inert_intf has written the correct values to gyro registers 0x0D and
+0x11 via SPI.
+
+What it checks: Verifies the full SPI initialization sequence inside inert_intf
+— RST_WAIT timer, INIT1 (0x0D←0x02), INIT2 (0x11←0x60), INIT3 writes — all
+complete correctly before any calibration is attempted.
+
+Signals checked: iPHYS.iNEMO.NEMO_setup
+
+
+TEST 3: Calibrate Command (0x0000)
+------------------------------------
+What it does: Sends command 0x0000 (opcode 3'b000 = calibrate) via RemoteComm
+over UART. Waits for cal_done to assert inside inertial_integrator, then waits
+for a positive acknowledge byte (0xA5) to be received back by RemoteComm.
+
+What it checks: Exercises the complete path — BLE→UART_wrapper→cmd_proc→
+strt_cal→inert_intf→inertial_integrator (8 gyro samples in FAST_SIM)→
+cal_done→cmd_proc RESP state→UART_wrapper TX→RemoteComm resp_rdy. Also
+confirms the response byte is exactly 0xA5.
+
+Signals checked: iDUT.cal_done, resp_rdy, resp
+
+
+TEST 4: Heading Change West (0x23FF)
+--------------------------------------
+What it does: Sends command 0x23FF (opcode 3'b001, heading = 0x3FF = west).
+Waits 50000 cycles for the PID to build up correction, then samples motor
+duties over 10000 cycles. After mv_cmplt, checks heading is near 0x3FF.
+
+What it checks: cmd_proc correctly decodes the heading command and asserts
+strt_hdng. navigate enters HEADING state and sets moving=1. PID computes a
+non-zero correction (rght_spd > lft_spd for a CCW turn). MtrDrv translates
+this into a measurable duty cycle difference. inert_intf+inertial_integrator
+continuously update actl_hdng. mv_cmplt fires when at_hdng asserts.
+
+Signals checked: iDUT.iMTR.lft_duty, iDUT.iMTR.rght_duty, iDUT.actl_hdng,
+resp (0xA5 pos ack)
+
+
+TEST 5: Heading Change South (0x27FF)
+---------------------------------------
+What it does: Sends command 0x27FF (opcode 3'b001, heading = 0x7FF = south).
+Waits for pos ack and checks heading is near 0x7FF.
+
+What it checks: Back-to-back heading commands work correctly. cmd_proc returns
+to IDLE after RESP and accepts a new command immediately. navigate completes
+the second heading change and issues mv_cmplt. This also orients the robot
+toward the open direction in the maze (cell 3,3 has N/E/W walls — south is
+open) so the forward move in test 6 is physically valid.
+
+Signals checked: iDUT.actl_hdng, resp (0xA5 pos ack)
+
+
+TEST 6: Move Forward (0x4000)
+-------------------------------
+What it does: Sends command 0x4000 (opcode 3'b010, stp_lft=0, stp_rght=0).
+Waits for iPHYS.omega_sum to exceed 5000 (both wheels spinning forward).
+
+What it checks: cmd_proc correctly decodes the move command and asserts
+strt_mv. navigate enters ACCEL state, frwrd_spd ramps from MIN_FRWRD toward
+MAX_FRWRD on each hdng_rdy pulse. PID+MtrDrv translate frwrd_spd into
+symmetric PWM signals. RunnerPhysics integrates wheel velocities and confirms
+both wheels are driving forward (omega_sum > 0).
+
+Signals checked: iPHYS.omega_sum
+
+
+================================================================================
+TIMEOUT POLICY
+All tasks have a maximum cycle count (200k–2M depending on operation). If the
+expected signal does not assert within the timeout, the task prints a FAIL
+message and calls $stop so the failure location is immediately visible.
+
+A global 100ms simulation timeout ($stop at #100_000_000) acts as a last-resort
+safety net in case any task's own timeout is insufficient.
+================================================================================
