@@ -109,7 +109,10 @@ module navigate(clk,rst_n,strt_hdng,strt_mv,stp_lft,stp_rght,mv_cmplt,hdng_rdy,m
 
       HEADING: begin
         moving = 1'b1;
-        if (at_hdng) begin
+        // Only declare heading complete on a fresh inertial sample.
+        // This avoids prematurely completing HEADING on a stale at_hdng value
+        // when dsrd_hdng updates and PID pipelines are present.
+        if (hdng_rdy && at_hdng) begin
           nxt_state = IDLE;
           mv_cmplt = 1'b1;
         end
