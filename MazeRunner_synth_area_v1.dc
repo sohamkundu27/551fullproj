@@ -48,6 +48,7 @@ set_fix_hold [get_clocks clk]
 compile -incremental -map_effort medium
 
 report_timing -delay min > MazeRunner_timing_min_v1.rpt
+report_timing -delay max > MazeRunner_timing_max_v1.rpt
 report_timing -delay max -max_paths 5 > MazeRunner_timing_v1.rpt
 report_area > MazeRunner_area_v1.rpt
 report_area -hierarchy > MazeRunner_area_hier_v1.rpt
