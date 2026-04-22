@@ -29,6 +29,10 @@ module MtrDrv(
 
   logic signed [12:0] lft_scaled_ext;
   logic signed [12:0] rght_scaled_ext;
+  logic signed [11:0] lft_scaled_q;
+  logic signed [11:0] rght_scaled_q;
+  logic signed [12:0] lft_scaled_q_ext;
+  logic signed [12:0] rght_scaled_q_ext;
 
   // Pre-flop duty values (combinational) and registered outputs to PWM12.
   logic [11:0] lft_duty_nxt;
@@ -59,11 +63,25 @@ module MtrDrv(
   assign lft_scaled_ext  = {lft_scaled[11],  lft_scaled};
   assign rght_scaled_ext = {rght_scaled[11], rght_scaled};
 
+  // Additional pipeline cut: register the saturated scaled speeds before
+  // duty conversion. This shortens the PID->MtrDrv max path significantly.
+  always_ff @(posedge clk, negedge rst_n)
+    if (!rst_n) begin
+      lft_scaled_q  <= 12'sh000;
+      rght_scaled_q <= 12'sh000;
+    end else begin
+      lft_scaled_q  <= lft_scaled;
+      rght_scaled_q <= rght_scaled;
+    end
+
+  assign lft_scaled_q_ext  = {lft_scaled_q[11],  lft_scaled_q};
+  assign rght_scaled_q_ext = {rght_scaled_q[11], rght_scaled_q};
+
   // left motor uses normal signed-to-unsigned conversion
-  assign lft_duty_nxt  = duty_sat(13'sd2048 + lft_scaled_ext);
+  assign lft_duty_nxt  = duty_sat(13'sd2048 + lft_scaled_q_ext);
 
   // right motor is physically flipped, so its command is inverted
-  assign rght_duty_nxt = duty_sat(13'sd2048 - rght_scaled_ext);
+  assign rght_duty_nxt = duty_sat(13'sd2048 - rght_scaled_q_ext);
 
   // Pipeline register between the duty arithmetic and PWM12 inputs.
   // This is the stage that breaks the long IR->PID->MtrDrv->PWM path.

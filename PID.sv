@@ -121,14 +121,21 @@ module PID (
   // PID sum, divide by 8, motor speed output //
   /////////////////////////////////////////////
   logic signed [13:0] PID_sum;
-  logic signed [11:0] PID_div8;
+  logic signed [11:0] PID_corr_nxt, PID_corr_q;
   logic signed [11:0] frwrd_ext;
 
   // Total control effort, then scale down by 8 for motor command range.
   assign PID_sum = {{2{P_term[11]}}, P_term}
                  + {{2{I_term[11]}}, I_term}
                  + {{2{D_term[11]}}, D_term};
-  assign PID_div8 = PID_sum >>> 3;
+  assign PID_corr_nxt = PID_sum >>> 3;
+
+  // Additional pipeline cut: register correction term before speed outputs.
+  always_ff @(posedge clk, negedge rst_n)
+    if (!rst_n)
+      PID_corr_q <= 12'h000;
+    else
+      PID_corr_q <= PID_corr_nxt;
 
   // Extend unsigned forward speed to signed 12-bit domain.
   assign frwrd_ext = {1'b0, frwrd_spd};
@@ -137,8 +144,8 @@ module PID (
   // Pipeline the motor-speed outputs to break the long IR->MtrDrv->PWM
   // combinational chain (critical-path fix).
   logic signed [11:0] lft_spd_nxt, rght_spd_nxt;
-  assign lft_spd_nxt  = moving ? (frwrd_ext + PID_div8) : 12'h000;
-  assign rght_spd_nxt = moving ? (frwrd_ext - PID_div8) : 12'h000;
+  assign lft_spd_nxt  = moving ? (frwrd_ext + PID_corr_q) : 12'h000;
+  assign rght_spd_nxt = moving ? (frwrd_ext - PID_corr_q) : 12'h000;
 
   always_ff @(posedge clk, negedge rst_n)
     if (!rst_n) begin
