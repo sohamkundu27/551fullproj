@@ -1,6 +1,10 @@
 # MazeRunner_synth_area_v1.dc
 # Variant 1: area-oriented compile knobs with relaxed transition.
 
+# Explicit library setup (LVT target + IO link; avoids your_library.db placeholder).
+set_app_var target_library "/cae/apps/data/saed32_edk-current/lib/stdcell_lvt/db_nldm/saed32lvt_tt0p85v25c.db"
+set_app_var link_library   "* $target_library /cae/apps/data/saed32_edk-current/lib/io_std/db_nldm/saed32io_wb_tt1p05v25c_2p5v.db"
+
 read_file -format sverilog reset_synch.sv
 read_file -format sverilog UART_tx.sv
 read_file -format sverilog UART_rx.sv
@@ -28,17 +32,20 @@ set current_design MazeRunner
 link
 
 create_clock -name "clk" -period 2.75 [get_ports clk]
-set_clock_uncertainty 0.10 [get_clocks clk]
+set_clock_uncertainty -setup 0.08 [get_clocks clk]
+set_clock_uncertainty -hold  0.00 [get_clocks clk]
 set_input_delay  0.6 -clock clk [remove_from_collection [all_inputs] [get_ports clk]]
 set_output_delay 0.5 -clock clk [all_outputs]
-set_driving_cell -lib_cell NAND2X1_LVT -library SAED32_lib [remove_from_collection [all_inputs] [get_ports clk]]
+set_driving_cell -lib_cell NAND2X1_LVT -library saed32lvt_tt0p85v25c [remove_from_collection [all_inputs] [get_ports clk]]
 set_load         0.1                [all_outputs]
-set_wire_load_model -name 16000 -library SAED32_lib
+set_wire_load_model -name 16000 -library saed32lvt_tt0p85v25c
 set_max_transition 0.25 [current_design]
 
 compile -map_effort medium -area_effort high
 ungroup -all -flatten
 compile -map_effort medium -area_effort high
+set_fix_hold [get_clocks clk]
+compile -incremental -map_effort medium
 
 report_timing -delay min > MazeRunner_timing_min_v1.rpt
 report_timing -delay max -max_paths 5 > MazeRunner_timing_v1.rpt
