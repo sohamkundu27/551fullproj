@@ -67,13 +67,13 @@ set_output_delay 0.5 -clock clk [all_outputs]
 #    Drive: equivalent to size-2 2-input NAND from our library
 #    Load:  0.1 pF on all outputs
 # ---------------------------------------------------------------
-set_driving_cell -lib_cell NAND2_X2 [remove_from_collection [all_inputs] [get_ports clk]]
+set_driving_cell -lib_cell NAND2X1_LVT -library SAED32_lib [remove_from_collection [all_inputs] [get_ports clk]]
 set_load         0.1                [all_outputs]
 
 # ---------------------------------------------------------------
 # 7. Wireload model
 # ---------------------------------------------------------------
-set_wire_load_model -name 16000 -library saed14rvt_ss0p75vn40c
+set_wire_load_model -name 16000 -library SAED32_lib
 
 # ---------------------------------------------------------------
 # 8. Max transition time
