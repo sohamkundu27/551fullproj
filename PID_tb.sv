@@ -1,5 +1,8 @@
 `timescale 1ns/1ps
 
+// PID_tb.sv
+// Unit testbench for PID control-law outputs.
+// Sweeps heading error scenarios and checks left/right speed response direction.
 module PID_tb;
 
   // Stimulus signals driven by the testbench.

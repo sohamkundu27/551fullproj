@@ -1,3 +1,6 @@
+// MtrDrv.sv
+// Converts signed wheel speed commands into PWM duties for left/right motors.
+// Includes battery-voltage scaling, saturation, and duty pipelining before PWM12.
 module MtrDrv(
   input  logic              clk,
   input  logic              rst_n,

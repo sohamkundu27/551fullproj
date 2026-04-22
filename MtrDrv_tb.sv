@@ -1,5 +1,8 @@
 `timescale 1ns/1ps
 
+// MtrDrv_tb.sv
+// Unit testbench for motor driver scaling/saturation and PWM duty generation.
+// Exercises battery scaling with signed speed inputs.
 module MtrDrv_tb();
 
   logic clk;

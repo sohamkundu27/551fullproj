@@ -1,3 +1,6 @@
+// maze_solve_tb.sv
+// Unit testbench for maze_solve autonomous-state behavior.
+// Checks start-move/start-heading outputs for representative openings/events.
 module maze_solve_tb();
 
     // Signal declarations

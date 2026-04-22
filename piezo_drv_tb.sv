@@ -1,3 +1,6 @@
+// piezo_drv_tb.sv
+// Unit testbench for piezo_drv tone/fanfare state sequencing.
+// Validates response to fanfare and battery-low inputs.
 module piezo_drv_tb();
 
     // Inputs

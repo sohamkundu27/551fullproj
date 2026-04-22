@@ -1,3 +1,6 @@
+// UART_wrapper.sv
+// Protocol wrapper around UART TX/RX.
+// Packs two received bytes into a 16-bit command and transmits 8-bit responses.
 module UART_wrapper (
     input clk, rst_n, // 50 MHz clock and asynch active low reset
     input RX, // receive line (19200 baud)

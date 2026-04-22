@@ -1,3 +1,6 @@
+// cmd_proc.sv
+// Decodes BLE/UART commands and issues high-level control actions:
+// calibration, heading changes, forward moves, and response handshakes.
 module cmd_proc (
     input logic clk,
     input logic rst_n,

@@ -1,3 +1,6 @@
+// navigate_shell.sv
+// Navigation/motion-control FSM.
+// Sequences heading alignment, acceleration/cruise/decel, and move completion.
 module navigate(clk,rst_n,strt_hdng,strt_mv,stp_lft,stp_rght,mv_cmplt,hdng_rdy,moving,
                 en_fusion,at_hdng,lft_opn,rght_opn,frwrd_opn,frwrd_spd);
 

@@ -1,3 +1,6 @@
+// navigate_tb_starter.sv
+// Unit testbench for the navigate FSM.
+// Drives heading/move commands and checks movement-state behavior.
 module navigate_tb();
 
   //// Declare stimulus as type reg ////

@@ -1,5 +1,8 @@
 `timescale 1ns/1ps
 
+// inert_intf_tb.sv
+// Unit testbench for inert_intf gyro/SPI bring-up and heading-valid handshakes.
+// Drives calibration and emulated sensor interrupt traffic.
 module inert_intf_tb;
 
   logic clk;

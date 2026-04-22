@@ -1,3 +1,6 @@
+// piezo_drv.sv
+// Audio-pattern generator for the piezo buzzer.
+// Plays a fanfare sequence and battery-low alert tones.
 module piezo_drv(clk, rst_n, batt_low, fanfare, piezo, piezo_n);
 
 // inputs and outputs

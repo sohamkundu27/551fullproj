@@ -1,3 +1,6 @@
+// PWM12.sv
+// 12-bit PWM generator with non-overlap between complementary outputs.
+// Used by MtrDrv for H-bridge motor drive timing.
 module PWM12(
  input clk, // 50 MHz system clock
  input rst_n, // asynchronous active low reset for system

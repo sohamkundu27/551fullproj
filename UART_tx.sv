@@ -1,3 +1,6 @@
+// UART_tx.sv
+// Byte-oriented UART transmitter (19200 baud at 50 MHz clock).
+// Serializes start bit, 8 data bits, and stop bit with tx_done handshake.
 module UART_tx (
     input clk, // 50 MHz clock
     input rst_n, // active low reset

@@ -1,3 +1,6 @@
+// reset_synch.sv
+// Two-flop reset synchronizer:
+// converts asynchronous active-low RST_n into a clock-domain-safe rst_n.
 module reset_synch(
   input  logic RST_n,
   input  logic clk,

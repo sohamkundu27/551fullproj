@@ -1,3 +1,6 @@
+// UART_rx.sv
+// Byte-oriented UART receiver (19200 baud at 50 MHz clock).
+// Detects start bit, samples incoming bits, and raises rdy when a byte is valid.
 module UART_rx (
     input clk, // 50 MHz clock
     input rst_n, // active low reset

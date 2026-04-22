@@ -1,3 +1,6 @@
+// piezo_drv_test.sv
+// FPGA/top-level bring-up wrapper for piezo_drv.
+// Maps board inputs/outputs for interactive tone testing.
 module piezo_drv_test(clk, RST_n, fanfare, batt_low, piezo, piezo_n, LED);
  
     // signal declarations

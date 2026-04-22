@@ -1,5 +1,8 @@
 `timescale 1ns/1ps
 
+// CommTB.sv
+// UART communication integration testbench.
+// Verifies RemoteComm <-> UART_wrapper command/response path with timeouts.
 module CommTB;
 
   // 50 MHz clock and conservative UART transaction timeout.

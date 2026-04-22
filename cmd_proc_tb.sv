@@ -1,3 +1,6 @@
+// cmd_proc_tb.sv
+// Unit testbench for cmd_proc command decoding and response behavior.
+// Verifies state transitions, outputs, and handshake timing.
 module cmd_proc_tb;
 
     logic clk;

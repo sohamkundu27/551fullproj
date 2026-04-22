@@ -1,3 +1,6 @@
+// IR_Math.sv
+// Computes heading correction from left/right IR wall measurements and IR_Dtrm.
+// Produces adjusted desired heading used by PID when fusion is enabled.
 // Computes heading adjustment from IR sensor readings
 module IR_math #(
     parameter logic [11:0] NOM_IR = 12'h900

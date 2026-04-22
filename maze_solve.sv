@@ -1,3 +1,6 @@
+// maze_solve.sv
+// Maze-solving state machine for autonomous mode.
+// Chooses move/turn commands using opening sensors and move-complete feedback.
 module maze_solve(clk, rst_n, cmd_md, cmd0, lft_opn, rght_opn, mv_cmplt, sol_cmplt, strt_hdng, dsrd_hdng, strt_mv, stp_lft, stp_rght);
 
 // inputs and outputs

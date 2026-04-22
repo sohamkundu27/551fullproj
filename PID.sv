@@ -1,3 +1,7 @@
+// PID.sv
+// Closed-loop heading controller used by MazeRunner.
+// Computes P/I/D correction from heading error, then outputs signed
+// left/right wheel speed commands around the requested forward speed.
 module PID (
     input  logic        clk,
     input  logic        rst_n,

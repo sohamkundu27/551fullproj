@@ -1,3 +1,6 @@
+// RemoteComm.sv
+// Testbench-side UART command/response helper.
+// Sends 16-bit commands to MazeRunner and captures 8-bit acknowledgements.
 module RemoteComm (
     input clk, rst_n,   // 50 MHz clock and asynch active low reset
     input [15:0] cmd,   // 16-bit command to send
