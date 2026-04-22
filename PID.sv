@@ -64,6 +64,7 @@ module PID (
   logic ov;
   logic signed [11:0] I_term;
 
+
   // Sign-extend saturated error to integrator width.
   assign err_ext = {{6{err_sat[9]}}, err_sat};
   assign accum = err_ext + integrator;

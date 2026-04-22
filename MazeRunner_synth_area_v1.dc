@@ -49,3 +49,4 @@ write -format verilog -hierarchy -output MazeRunner_v1.vg
 write_sdf MazeRunner_v1.sdf
 
 exit
+
