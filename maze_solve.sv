@@ -156,7 +156,6 @@ always_comb begin
                 nxt_state = MV_FRWD; // go back to MV_FRWD to decide what move to do
         end
 
-
         DONE: nxt_state = DONE; // Stay in DONE bc solution was found
 		
         default: nxt_state = IDLE; // default state is IDLE
