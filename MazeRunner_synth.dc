@@ -7,32 +7,30 @@
 # Soham Kundu / Group: Bhanu Kankanala, Arnav Mohanty, Soham Kundu, Mohnish Nanthakumar
 
 # ---------------------------------------------------------------
-# 1. Read all design files (synthesizable only — no TB, no models)
+# 1. Read all design files (synthesizable only -- no TB, no models)
 # ---------------------------------------------------------------
-read_file -format sverilog {
-  reset_synch.sv
-  UART_tx.sv
-  UART_rx.sv
-  UART.sv
-  UART_wrapper.sv
-  cmd_proc.sv
-  maze_solve.sv
-  navigate_shell.sv
-  IR_Math.sv
-  PID.sv
-  DutyScaleROM.sv
-  PWM12.sv
-  MtrDrv.sv
-  inertial_integrator.sv
-  SPI_main.sv
-  SPI_mnrch.sv
-  inert_intf.sv
-  PWM8.sv
-  A2D_intf.sv
-  sensor_intf.sv
-  piezo_drv.sv
-  MazeRunner.sv
-}
+read_file -format sverilog reset_synch.sv
+read_file -format sverilog UART_tx.sv
+read_file -format sverilog UART_rx.sv
+read_file -format sverilog UART.sv
+read_file -format sverilog UART_wrapper.sv
+read_file -format sverilog cmd_proc.sv
+read_file -format sverilog maze_solve.sv
+read_file -format sverilog navigate_shell.sv
+read_file -format sverilog IR_Math.sv
+read_file -format sverilog PID.sv
+read_file -format sverilog DutyScaleROM.sv
+read_file -format sverilog PWM12.sv
+read_file -format sverilog MtrDrv.sv
+read_file -format sverilog inertial_integrator.sv
+read_file -format sverilog SPI_main.sv
+read_file -format sverilog SPI_mnrch.sv
+read_file -format sverilog inert_intf.sv
+read_file -format sverilog PWM8.sv
+read_file -format sverilog A2D_intf.sv
+read_file -format sverilog sensor_intf.sv
+read_file -format sverilog piezo_drv.sv
+read_file -format sverilog MazeRunner.sv
 
 # ---------------------------------------------------------------
 # 2. Set the top-level design
@@ -86,7 +84,7 @@ set_max_transition 0.125 [current_design]
 compile -map_effort medium
 
 # ---------------------------------------------------------------
-# 10. Smash hierarchy — area must be reported after this
+# 10. Smash hierarchy -- area must be reported after this
 # ---------------------------------------------------------------
 ungroup -all -flatten
 
