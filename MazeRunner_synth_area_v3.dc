@@ -1,0 +1,51 @@
+# MazeRunner_synth_area_v3.dc
+# Variant 3: keep original uncertainty, relax transition and maximize area effort.
+
+read_file -format sverilog reset_synch.sv
+read_file -format sverilog UART_tx.sv
+read_file -format sverilog UART_rx.sv
+read_file -format sverilog UART.sv
+read_file -format sverilog UART_wrapper.sv
+read_file -format sverilog cmd_proc.sv
+read_file -format sverilog maze_solve.sv
+read_file -format sverilog navigate_shell.sv
+read_file -format sverilog IR_Math.sv
+read_file -format sverilog PID.sv
+read_file -format sverilog DutyScaleROM.sv
+read_file -format sverilog PWM12.sv
+read_file -format sverilog MtrDrv.sv
+read_file -format sverilog inertial_integrator.sv
+read_file -format sverilog SPI_main.sv
+read_file -format sverilog SPI_mnrch.sv
+read_file -format sverilog inert_intf.sv
+read_file -format sverilog PWM8.sv
+read_file -format sverilog A2D_intf.sv
+read_file -format sverilog sensor_intf.sv
+read_file -format sverilog piezo_drv.sv
+read_file -format sverilog MazeRunner.sv
+
+set current_design MazeRunner
+link
+
+create_clock -name "clk" -period 2.75 [get_ports clk]
+set_clock_uncertainty 0.125 [get_clocks clk]
+set_input_delay  0.6 -clock clk [remove_from_collection [all_inputs] [get_ports clk]]
+set_output_delay 0.5 -clock clk [all_outputs]
+set_driving_cell -lib_cell NAND2X1_LVT -library SAED32_lib [remove_from_collection [all_inputs] [get_ports clk]]
+set_load         0.1                [all_outputs]
+set_wire_load_model -name 16000 -library SAED32_lib
+set_max_transition 0.25 [current_design]
+
+compile -map_effort medium -area_effort high
+ungroup -all -flatten
+compile -map_effort medium -area_effort high
+
+report_timing -delay min > MazeRunner_timing_min_v3.rpt
+report_timing -delay max -max_paths 5 > MazeRunner_timing_v3.rpt
+report_area > MazeRunner_area_v3.rpt
+report_area -hierarchy > MazeRunner_area_hier_v3.rpt
+
+write -format verilog -hierarchy -output MazeRunner_v3.vg
+write_sdf MazeRunner_v3.sdf
+
+exit

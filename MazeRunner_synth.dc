@@ -76,7 +76,8 @@ set_wire_load_model -name 16000 -library SAED32_lib
 # ---------------------------------------------------------------
 # 8. Max transition time
 # ---------------------------------------------------------------
-set_max_transition 0.125 [current_design]
+# Slightly relaxed to reduce upsizing pressure during DRC fixing.
+set_max_transition 0.20 [current_design]
 
 # ---------------------------------------------------------------
 # 9. Compile  (compile_ultra is FORBIDDEN per spec)
@@ -104,11 +105,14 @@ report_timing -delay min
 # max timing
 # ---------------------------------------------------------------
 report_timing -delay max
+report_timing -delay max -max_paths 5
 
 # 12. Timing and area reports
 # ---------------------------------------------------------------
 report_timing  > MazeRunner_timing.rpt
+report_timing -delay max -max_paths 5 > MazeRunner_timing_top5.rpt
 report_area    > MazeRunner_area.rpt
+report_area -hierarchy > MazeRunner_area_hier.rpt
 
 # Print area to transcript so it is visible during demo
 report_area

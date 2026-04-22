@@ -16,13 +16,24 @@ module PID (
   localparam signed [4:0] D_COEFF = 5'h0E;
 
   ///////////////////////////////////////////
-  // Error computation and 10-bit saturate //
-  /////////////////////////////////////////
+  // Input pipeline + error / 10-bit clamp //
+  ///////////////////////////////////////////
+  logic signed [11:0] dsrd_hdng_q, actl_hdng_q;
   logic signed [11:0] error;
   logic signed [9:0] err_sat;
 
+  // Pipeline desired/actual heading before PID combinational math.
+  always_ff @(posedge clk, negedge rst_n)
+    if (!rst_n) begin
+      dsrd_hdng_q <= 12'h000;
+      actl_hdng_q <= 12'h000;
+    end else begin
+      dsrd_hdng_q <= dsrd_hdng;
+      actl_hdng_q <= actl_hdng;
+    end
+
   // Signed heading error (actual - desired).
-  assign error = actl_hdng - dsrd_hdng;
+  assign error = actl_hdng_q - dsrd_hdng_q;
 
   // Clamp the 12-bit error into a 10-bit range before PID math.
   assign err_sat = (!error[11] && |error[10:9])  ? 10'sb0111111111 :
@@ -36,10 +47,10 @@ module PID (
   // P term //
   ///////////
   // P_COEFF = 3  =>  err_sat*3 = (err_sat<<1) + err_sat
-  logic signed [13:0] P_term;
+  logic signed [11:0] P_term;
 
-  assign P_term = {{3{err_sat[9]}}, err_sat, 1'b0}
-                + {{4{err_sat[9]}}, err_sat};
+  assign P_term = {{1{err_sat[9]}}, err_sat, 1'b0}
+                + {{2{err_sat[9]}}, err_sat};
 
   /////////////
   // I term //
@@ -76,7 +87,7 @@ module PID (
   logic signed [9:0] ff1, ff2;
   logic signed [9:0] diff;
   logic signed [7:0] diff_sat;
-  logic signed [12:0] D_term;
+  logic signed [11:0] D_term;
 
   always_ff @(posedge clk, negedge rst_n)
     if (!rst_n) begin
@@ -97,20 +108,22 @@ module PID (
                     diff[7:0];
 
   // D_COEFF = 14 = 8 + 4 + 2  =>  (diff_sat<<3) + (diff_sat<<2) + (diff_sat<<1)
-  assign D_term = {{2{diff_sat[7]}}, diff_sat, 3'b000}
-                + {{3{diff_sat[7]}}, diff_sat, 2'b00}
-                + {{4{diff_sat[7]}}, diff_sat, 1'b0};
+  assign D_term = {{1{diff_sat[7]}}, diff_sat, 3'b000}
+                + {{2{diff_sat[7]}}, diff_sat, 2'b00}
+                + {{3{diff_sat[7]}}, diff_sat, 1'b0};
 
   ///////////////////////////////////////////////
   // PID sum, divide by 8, motor speed output //
   /////////////////////////////////////////////
-  logic signed [14:0] PID_sum;
+  logic signed [13:0] PID_sum;
   logic signed [11:0] PID_div8;
   logic signed [11:0] frwrd_ext;
 
   // Total control effort, then scale down by 8 for motor command range.
-  assign PID_sum = P_term + I_term + D_term;
-  assign PID_div8 = PID_sum[14:3];
+  assign PID_sum = {{2{P_term[11]}}, P_term}
+                 + {{2{I_term[11]}}, I_term}
+                 + {{2{D_term[11]}}, D_term};
+  assign PID_div8 = PID_sum >>> 3;
 
   // Extend unsigned forward speed to signed 12-bit domain.
   assign frwrd_ext = {1'b0, frwrd_spd};
