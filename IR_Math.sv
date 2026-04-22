@@ -48,6 +48,16 @@ module IR_math #(
   // Heading is a wrapping 12-bit angle; the previous [11:0] truncation of a
   // 13-bit sign-extended sum is equivalent to a plain 12-bit modular add.
   // Using a 12-bit adder instead of 13-bit saves cells with no behavior change.
-  assign dsrd_hdng_adj = en_fusion ? (dsrd_hdng + corr13[11:0]) : dsrd_hdng;
+  logic [11:0] dsrd_hdng_adj_pre;
+  assign dsrd_hdng_adj_pre = en_fusion ? (dsrd_hdng + corr13[11:0]) : dsrd_hdng;
+
+  // Hold-fix helper:
+  // Preserve a tiny two-inverter buffer chain on this output path so synthesis
+  // keeps non-zero min delay on very short IR_math->consumer routes.
+  (* keep = "true", syn_keep = 1 *) logic [11:0] dsrd_hdng_adj_buf1;
+  (* keep = "true", syn_keep = 1 *) logic [11:0] dsrd_hdng_adj_buf2;
+  assign dsrd_hdng_adj_buf1 = ~dsrd_hdng_adj_pre;
+  assign dsrd_hdng_adj_buf2 = ~dsrd_hdng_adj_buf1;
+  assign dsrd_hdng_adj      = dsrd_hdng_adj_buf2;
 
 endmodule
