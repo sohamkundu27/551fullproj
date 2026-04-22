@@ -35,9 +35,11 @@ module PID (
   /////////////
   // P term //
   ///////////
+  // P_COEFF = 3  =>  err_sat*3 = (err_sat<<1) + err_sat
   logic signed [13:0] P_term;
 
-  assign P_term = err_sat * P_COEFF;
+  assign P_term = {{3{err_sat[9]}}, err_sat, 1'b0}
+                + {{4{err_sat[9]}}, err_sat};
 
   /////////////
   // I term //
@@ -94,7 +96,10 @@ module PID (
                     ( diff[9] && ~&diff[8:7]) ? 8'sh80 :
                     diff[7:0];
 
-  assign D_term = diff_sat * D_COEFF;
+  // D_COEFF = 14 = 8 + 4 + 2  =>  (diff_sat<<3) + (diff_sat<<2) + (diff_sat<<1)
+  assign D_term = {{2{diff_sat[7]}}, diff_sat, 3'b000}
+                + {{3{diff_sat[7]}}, diff_sat, 2'b00}
+                + {{4{diff_sat[7]}}, diff_sat, 1'b0};
 
   ///////////////////////////////////////////////
   // PID sum, divide by 8, motor speed output //
@@ -111,7 +116,19 @@ module PID (
   assign frwrd_ext = {1'b0, frwrd_spd};
 
   // Differential steering: add/subtract correction around forward speed.
-  assign lft_spd  = moving ? (frwrd_ext + PID_div8) : 12'h000;
-  assign rght_spd = moving ? (frwrd_ext - PID_div8) : 12'h000;
+  // Pipeline the motor-speed outputs to break the long IR->MtrDrv->PWM
+  // combinational chain (critical-path fix).
+  logic signed [11:0] lft_spd_nxt, rght_spd_nxt;
+  assign lft_spd_nxt  = moving ? (frwrd_ext + PID_div8) : 12'h000;
+  assign rght_spd_nxt = moving ? (frwrd_ext - PID_div8) : 12'h000;
+
+  always_ff @(posedge clk, negedge rst_n)
+    if (!rst_n) begin
+      lft_spd  <= 12'h000;
+      rght_spd <= 12'h000;
+    end else begin
+      lft_spd  <= lft_spd_nxt;
+      rght_spd <= rght_spd_nxt;
+    end
 
 endmodule
