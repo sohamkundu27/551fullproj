@@ -1,4 +1,4 @@
-ECE 551 — MazeRunner Project
+ECE 551 - MazeRunner Project
 Test Suite Outline
 Group Members: Bhanu Kankanala, Arnav Mohanty, Soham Kundu, Mohnish Nanthakumar
 ================================================================================
@@ -6,101 +6,152 @@ Group Members: Bhanu Kankanala, Arnav Mohanty, Soham Kundu, Mohnish Nanthakumar
 OVERVIEW
 --------
 All tests are run in MazeRunner_tb.sv using RemoteComm to send 16-bit commands
-and RunnerPhysics to model the physical robot and maze. FAST_SIM=1 is set at
-the MazeRunner toplevel to keep simulation time reasonable. Each test is
-self-checking with timeouts that report FAIL and call $stop if something goes
-wrong. Tests run sequentially — each builds on the state left by the previous.
+and RunnerPhysics to model robot motion, maze walls, gyro behavior, and IR/A2D
+sensor responses. FAST_SIM=1 is enabled in the MazeRunner top level to keep
+simulation runtime practical. Tests are self-checking and stop immediately on
+failure with a descriptive message.
+
+Tests are ordered and stateful: each one assumes the DUT state left by earlier
+tests. The sequence covers reset behavior, sensor bring-up, command decoding,
+heading control, movement, invalid-command behavior, and solver-mode entry.
 
 
 TEST 1: PWM Midrail Check
---------------------------
-What it does: Immediately after reset, samples lft_duty and rght_duty inside
-MtrDrv before any command is sent.
+-------------------------
+What it does:
+After reset release and short settling time, samples iDUT.iMTR.lft_duty and
+iDUT.iMTR.rght_duty.
 
-What it checks: Both duty cycles are within the range 0x7E0–0x820 (midrail,
-~0x800). This confirms that with lft_spd and rght_spd both zero at reset, the
-motor driver produces a neutral PWM output and the robot will not move.
+What it checks:
+Both duties are near midrail (0x7E0 to 0x820). This confirms neutral motor
+drive at startup and no unintended movement.
 
-Signals checked: iDUT.iMTR.lft_duty, iDUT.iMTR.rght_duty
+Signals checked:
+iDUT.iMTR.lft_duty, iDUT.iMTR.rght_duty
 
 
 TEST 2: NEMO Setup
--------------------
-What it does: Waits for iPHYS.iNEMO.NEMO_setup to assert, which happens only
-after inert_intf has written the correct values to gyro registers 0x0D and
-0x11 via SPI.
+------------------
+What it does:
+Waits for iPHYS.iNEMO.NEMO_setup to assert.
 
-What it checks: Verifies the full SPI initialization sequence inside inert_intf
-— RST_WAIT timer, INIT1 (0x0D←0x02), INIT2 (0x11←0x60), INIT3 writes — all
-complete correctly before any calibration is attempted.
+What it checks:
+The inertial interface SPI initialization sequence completed before control
+tests proceed.
 
-Signals checked: iPHYS.iNEMO.NEMO_setup
+Signals checked:
+iPHYS.iNEMO.NEMO_setup
 
 
 TEST 3: Calibrate Command (0x0000)
-------------------------------------
-What it does: Sends command 0x0000 (opcode 3'b000 = calibrate) via RemoteComm
-over UART. Waits for cal_done to assert inside inertial_integrator, then waits
-for a positive acknowledge byte (0xA5) to be received back by RemoteComm.
+----------------------------------
+What it does:
+Sends command 0x0000 over UART via RemoteComm, waits for cal_done, then waits
+for response byte.
 
-What it checks: Exercises the complete path — BLE→UART_wrapper→cmd_proc→
-strt_cal→inert_intf→inertial_integrator (8 gyro samples in FAST_SIM)→
-cal_done→cmd_proc RESP state→UART_wrapper TX→RemoteComm resp_rdy. Also
-confirms the response byte is exactly 0xA5.
+What it checks:
+End-to-end command path and calibration flow:
+RemoteComm -> UART_wrapper -> cmd_proc -> strt_cal -> inert_intf ->
+inertial_integrator -> cal_done -> cmd_proc RESP -> UART_wrapper TX.
+Response must be 0xA5.
 
-Signals checked: iDUT.cal_done, resp_rdy, resp
+Signals checked:
+iDUT.cal_done, resp_rdy, resp
 
 
 TEST 4: Heading Change West (0x23FF)
---------------------------------------
-What it does: Sends command 0x23FF (opcode 3'b001, heading = 0x3FF = west).
-Waits 50000 cycles for the PID to build up correction, then samples motor
-duties over 10000 cycles. After mv_cmplt, checks heading is near 0x3FF.
+------------------------------------
+What it does:
+Sends heading command 0x23FF (west), lets control settle, then inspects wheel
+speed direction and movement state before waiting for ACK.
 
-What it checks: cmd_proc correctly decodes the heading command and asserts
-strt_hdng. navigate enters HEADING state and sets moving=1. PID computes a
-non-zero correction (rght_spd > lft_spd for a CCW turn). MtrDrv translates
-this into a measurable duty cycle difference. inert_intf+inertial_integrator
-continuously update actl_hdng. mv_cmplt fires when at_hdng asserts.
+What it checks:
+Heading command decode and turn behavior:
+- navigate enters HEADING and asserts moving
+- PID produces CCW turn direction (lft_spd < 0 and rght_spd > 0)
+- command completes and responds with 0xA5
 
-Signals checked: iDUT.iMTR.lft_duty, iDUT.iMTR.rght_duty, iDUT.actl_hdng,
-resp (0xA5 pos ack)
+Signals checked:
+iDUT.moving, iDUT.lft_spd, iDUT.rght_spd, iDUT.iMTR.*duty, resp
 
 
 TEST 5: Heading Change South (0x27FF)
----------------------------------------
-What it does: Sends command 0x27FF (opcode 3'b001, heading = 0x7FF = south).
-Waits for pos ack and checks heading is near 0x7FF.
+-------------------------------------
+What it does:
+Sends heading command 0x27FF (south), waits for ACK, checks heading closeness,
+and waits for robot angular velocities to settle before the next move test.
 
-What it checks: Back-to-back heading commands work correctly. cmd_proc returns
-to IDLE after RESP and accepts a new command immediately. navigate completes
-the second heading change and issues mv_cmplt. This also orients the robot
-toward the open direction in the maze (cell 3,3 has N/E/W walls — south is
-open) so the forward move in test 6 is physically valid.
+What it checks:
+Back-to-back heading commands are accepted and completed correctly. Also ensures
+robot is settled before forward movement test to avoid transient physics errors.
 
-Signals checked: iDUT.actl_hdng, resp (0xA5 pos ack)
+Signals checked:
+iDUT.actl_hdng, resp, iPHYS.omega_lft, iPHYS.omega_rght
 
 
 TEST 6: Move Forward (0x4000)
--------------------------------
-What it does: Sends command 0x4000 (opcode 3'b010, stp_lft=0, stp_rght=0).
-Waits for iPHYS.omega_sum to exceed 5000 (both wheels spinning forward).
+-----------------------------
+What it does:
+Sends move command 0x4000 and waits until RunnerPhysics reports forward wheel
+motion (omega_sum exceeds threshold), then checks ACK and command-mode return.
 
-What it checks: cmd_proc correctly decodes the move command and asserts
-strt_mv. navigate enters ACCEL state, frwrd_spd ramps from MIN_FRWRD toward
-MAX_FRWRD on each hdng_rdy pulse. PID+MtrDrv translate frwrd_spd into
-symmetric PWM signals. RunnerPhysics integrates wheel velocities and confirms
-both wheels are driving forward (omega_sum > 0).
+What it checks:
+MOVE command decode and acceleration path:
+- cmd_proc asserts strt_mv
+- navigate ramps frwrd_spd
+- PID + MtrDrv generate forward wheel drive
+- command returns to cmd mode after completion
 
-Signals checked: iPHYS.omega_sum
+Signals checked:
+iPHYS.omega_sum, resp, iDUT.cmd_md
+
+
+TEST 7: Invalid Opcode Has No Response (0xE000)
+-----------------------------------------------
+What it does:
+Sends unsupported opcode 0xE000 and watches a bounded window for response.
+
+What it checks:
+Invalid commands do not generate spurious responses.
+
+Signals checked:
+resp_rdy edge activity, resp
+
+
+TEST 8: Move Stop-Bit Decode + Response (0x4003)
+------------------------------------------------
+What it does:
+Sends MOVE command 0x4003 (both stop bits set), waits a few cycles, checks
+latched stop bits in cmd_proc, then checks ACK and cmd-mode return.
+
+What it checks:
+Correct decoding and latching of cmd[1:0] for MOVE:
+- stp_lft = 1
+- stp_rght = 1
+Also confirms response and control-flow completion.
+
+Signals checked:
+iDUT.iCMD.stp_lft, iDUT.iCMD.stp_rght, resp, iDUT.cmd_md
+
+
+TEST 9: Solve Command Enters Solver Mode (0x6001)
+-------------------------------------------------
+What it does:
+Sends solve command 0x6001 and waits for cmd_md to go low.
+
+What it checks:
+cmd_proc transitions to solver mode and hands control to maze_solve path.
+
+Signals checked:
+iDUT.cmd_md
 
 
 ================================================================================
 TIMEOUT POLICY
-All tasks have a maximum cycle count (200k–2M depending on operation). If the
-expected signal does not assert within the timeout, the task prints a FAIL
-message and calls $stop so the failure location is immediately visible.
+Each wait task has a bounded cycle limit (typically 50k to 2M cycles depending
+on subsystem latency). If a condition is not met in time, the test prints FAIL
+with context and halts via $stop.
 
-A global 100ms simulation timeout ($stop at #100_000_000) acts as a last-resort
-safety net in case any task's own timeout is insufficient.
+A global 100 ms simulation timeout (#100_000_000) is also active to prevent
+hung runs in case a local timeout is missed.
 ================================================================================

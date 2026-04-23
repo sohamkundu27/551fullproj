@@ -186,6 +186,32 @@ module MazeRunner_tb();
     end
   endtask
 
+  // Wait for wheel angular velocities to settle near zero after turns.
+  // This avoids launching the next command while physics still has residual spin.
+  task automatic WaitRobotSettled(input int max_cycles, input int vel_abs_limit, input [255:0] label);
+    int timeout_cnt;
+    int abs_lft;
+    int abs_rght;
+    begin
+      timeout_cnt = 0;
+      while (timeout_cnt < max_cycles) begin
+        @(posedge clk);
+        abs_lft = $signed(iPHYS.omega_lft);
+        abs_rght = $signed(iPHYS.omega_rght);
+        if (abs_lft < 0) abs_lft = -abs_lft;
+        if (abs_rght < 0) abs_rght = -abs_rght;
+        if ((abs_lft <= vel_abs_limit) && (abs_rght <= vel_abs_limit)) begin
+          $display("[%0t] PASS: robot settled during %0s (|omega_l|=%0d |omega_r|=%0d)",
+                   $time, label, abs_lft, abs_rght);
+          return;
+        end
+        timeout_cnt++;
+      end
+      $display("FAIL: robot did not settle during %0s", label);
+      $stop;
+    end
+  endtask
+
   // Verify motors are neutral at reset (no unintended drive torque)
   task automatic CheckPWMsMidrail();
     logic [11:0] lft_d, rght_d;
@@ -339,6 +365,10 @@ module MazeRunner_tb();
     // Back-to-back heading command checks command re-acceptance after RESP
     SendCmd(16'h27FF);
     CheckPosAck();
+    // Ensure heading is still close to south and robot has stopped rotating
+    // before starting the forward move test.
+    CheckHeadingNear(12'h7FF, 120);
+    WaitRobotSettled(300_000, 1200, "post-south-turn settle");
     $display("[%0t] INFO: post-move heading=0x%03h (target=0x7FF, drift expected after stop)",
              $time, iDUT.actl_hdng);
 
