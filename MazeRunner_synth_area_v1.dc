@@ -31,14 +31,14 @@ set current_design MazeRunner
 link
 
 create_clock -name "clk" -period 2.75 [get_ports clk]
-set_clock_uncertainty -setup 0.08 [get_clocks clk]
-set_clock_uncertainty -hold  0.00 [get_clocks clk]
+set_clock_uncertainty -setup 0.125 [get_clocks clk]
+set_clock_uncertainty -hold  0.125 [get_clocks clk]
 set_input_delay  0.6 -clock clk [remove_from_collection [all_inputs] [get_ports clk]]
 set_output_delay 0.5 -clock clk [all_outputs]
 set_driving_cell -lib_cell NAND2X1_LVT -library saed32lvt_tt0p85v25c [remove_from_collection [all_inputs] [get_ports clk]]
 set_load         0.1                [all_outputs]
 set_wire_load_model -name 16000 -library saed32lvt_tt0p85v25c
-set_max_transition 0.25 [current_design]
+set_max_transition 0.125 [current_design]
 
 compile -map_effort medium -area_effort high
 ungroup -all -flatten

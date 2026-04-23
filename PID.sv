@@ -43,6 +43,14 @@ module PID (
                    ( error[11] && ~&error[10:9]) ? 10'sb1000000000 :
                    error[9:0];
 
+  logic signed [9:0] err_sat_q;
+
+  always_ff @(posedge clk, negedge rst_n)
+    if (!rst_n)
+      err_sat_q <= 10'h000;
+    else if (hdng_vld)
+      err_sat_q <= err_sat;
+
   // "At heading" when heading error is within a small deadband
   assign at_hdng = (err_sat < 10'sd30) && (err_sat > -10'sd30);
 
@@ -61,7 +69,7 @@ module PID (
 
 
   // Sign-extend saturated error to integrator width
-  assign err_ext = {{6{err_sat[9]}}, err_sat};
+  assign err_ext = {{6{err_sat_q[9]}}, err_sat_q};
   assign accum = err_ext + integrator;
 
   // Two's-complement overflow detect for accumulator add
