@@ -1,12 +1,11 @@
-///////////////////////////////////////////////////////////////////////////////
-// SPI_main.sv
-//
-// SPI master controller.  Transfers 16 bits full-duplex (MSB-first) with
-// CPOL=1, CPHA=1 timing.  A 5-bit clock divider generates SCLK from the
-// system clock (÷32).  The module manages front-porch and back-porch
-// timing around SS_n so that the slave has time to set up before the
-// first SCLK edge and the final bit is captured before SS_n de-asserts.
-///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////              
+// SPI controller; transfers 16 bits full-duplex (MSB-first) with           //
+// CPOL=1, CPHA=1 timing. A 5-bit clock divider generates SCLK from the    //
+// system clock. The module manages front-porch and back-porch            //
+// timing around SS_n so that the slave has time to set up before the    //
+// first SCLK edge and the final bit is captured before SS_n de-asserts.//
+/////////////////////////////////////////////////////////////////////////
+
 
 module SPI_main(
     input  logic        clk,        // system clock
@@ -32,12 +31,12 @@ module SPI_main(
 
     // smpl asserts one system-clock cycle before SCLK's rising edge
     // shft_imm asserts one system-clock cycle before SCLK's falling edge
-    wire smpl     = active && (sclk_div == 5'b01111);
+    wire smpl = active && (sclk_div == 5'b01111);
     wire shft_imm = active && (sclk_div == 5'b11111);
 
-    assign SS_n    = ~active;
-    assign SCLK    = active ? sclk_div[4] : 1'b1;   // CPOL=1: idle high
-    assign MOSI    = shft_reg[15];                    // MSB-first output
+    assign SS_n = ~active;
+    assign SCLK = active ? sclk_div[4] : 1'b1;   // CPOL=1: idle high
+    assign MOSI = shft_reg[15];                   // MSB-first output
     assign rd_data = shft_reg;
 
     always_ff @(posedge clk or negedge rst_n) begin
@@ -51,7 +50,7 @@ module SPI_main(
             finish_pending  <= 1'b0;
             done            <= 1'b0;
         end else begin
-            // --- Transaction kick-off ---
+            // Transaction kick-off
             if (wrt) begin
                 shft_reg        <= wt_data;
                 sclk_div        <= 5'b10111;   // front-porch setup
@@ -65,7 +64,7 @@ module SPI_main(
             else if (active) begin
                 sclk_div <= sclk_div + 5'd1;  // free-run the divider
 
-                // --- MISO sampling (just before rising SCLK edge) ---
+                // MISO sampling (just before rising SCLK edge)
                 if (smpl) begin
                     miso_smpl  <= MISO;
                     sample_cnt <= sample_cnt + 5'd1;
@@ -76,7 +75,7 @@ module SPI_main(
                     end
                 end
 
-                // --- Shift register update (just before falling SCLK edge) ---
+                // Shift register update (just before falling SCLK edge)
                 if (shft_imm) begin
                     if (!first_fall_seen) begin
                         // Suppress shifting on the first fall (front porch)

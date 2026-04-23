@@ -39,12 +39,12 @@ module PID_tb;
 
   initial begin
     // Initialize all inputs before deasserting reset.
-    rst_n      = 1'b0;
-    moving     = 1'b0;
-    dsrd_hdng  = 12'd0;
-    actl_hdng  = 12'd0;
-    hdng_vld   = 1'b0;
-    frwrd_spd  = 11'd0;
+    rst_n = 1'b0;
+    moving = 1'b0;
+    dsrd_hdng = 12'd0;
+    actl_hdng = 12'd0;
+    hdng_vld = 1'b0;
+    frwrd_spd = 11'd0;
 
     // Keep reset active for a few cycles so sequential state clears.
     repeat (3) @(posedge clk);
@@ -52,33 +52,33 @@ module PID_tb;
 
     // Begin motion with constant base speed.
     @(posedge clk);
-    moving    = 1'b1;
+    moving = 1'b1;
     frwrd_spd = 11'd400;
 
     // Case 1: Zero heading error. Expect small correction and at_hdng asserted.
     dsrd_hdng = 12'd1000;
     actl_hdng = 12'd1000;
-    hdng_vld  = 1'b1;
+    hdng_vld = 1'b1;
     // Pulse hdng_vld for one sample to mimic sensor update timing.
     @(posedge clk);
-    hdng_vld  = 1'b0;
+    hdng_vld = 1'b0;
     // Let internal pipeline/integrator settle for observation.
     repeat (4) @(posedge clk);
 
     // Case 2: Positive error (actual > desired). Expect one wheel to slow.
     dsrd_hdng = 12'd1000;
     actl_hdng = 12'd1200;
-    hdng_vld  = 1'b1;
+    hdng_vld = 1'b1;
     @(posedge clk);
-    hdng_vld  = 1'b0;
+    hdng_vld = 1'b0;
     repeat (8) @(posedge clk);
 
     // Case 3: Negative error (actual < desired). Expect opposite wheel response.
     dsrd_hdng = 12'd1200;
     actl_hdng = 12'd1000;
-    hdng_vld  = 1'b1;
+    hdng_vld = 1'b1;
     @(posedge clk);
-    hdng_vld  = 1'b0;
+    hdng_vld = 1'b0;
     repeat (8) @(posedge clk);
 
     // Stop command should force both outputs to zero.

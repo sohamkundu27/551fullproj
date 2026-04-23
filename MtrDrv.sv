@@ -46,7 +46,7 @@ module MtrDrv(
     .scale(scale_factor)
   );
 
-  assign lft_spd_ext  = {lft_spd[11],  lft_spd};
+  assign lft_spd_ext = {lft_spd[11], lft_spd};
   assign rght_spd_ext = {rght_spd[11], rght_spd};
 
   // scale_factor MSB is always 0 per the ROM; take only the low 12 bits and
@@ -54,13 +54,13 @@ module MtrDrv(
   // regardless of how the ROM port is declared.
   assign scale_ext = {1'b0, scale_factor[11:0]};
 
-  assign lft_prod  = lft_spd_ext  * scale_ext;
+  assign lft_prod = lft_spd_ext * scale_ext;
   assign rght_prod = rght_spd_ext * scale_ext;
 
-  assign lft_scaled  = sat12(lft_prod);
+  assign lft_scaled = sat12(lft_prod);
   assign rght_scaled = sat12(rght_prod);
 
-  assign lft_scaled_ext  = {lft_scaled[11],  lft_scaled};
+  assign lft_scaled_ext = {lft_scaled[11], lft_scaled};
   assign rght_scaled_ext = {rght_scaled[11], rght_scaled};
 
   // Additional pipeline cut: register the saturated scaled speeds before
@@ -74,11 +74,11 @@ module MtrDrv(
       rght_scaled_q <= rght_scaled;
     end
 
-  assign lft_scaled_q_ext  = {lft_scaled_q[11],  lft_scaled_q};
+  assign lft_scaled_q_ext = {lft_scaled_q[11], lft_scaled_q};
   assign rght_scaled_q_ext = {rght_scaled_q[11], rght_scaled_q};
 
   // left motor uses normal signed-to-unsigned conversion
-  assign lft_duty_nxt  = duty_sat(13'sd2048 + lft_scaled_q_ext);
+  assign lft_duty_nxt = duty_sat(13'sd2048 + lft_scaled_q_ext);
 
   // right motor is physically flipped, so its command is inverted
   assign rght_duty_nxt = duty_sat(13'sd2048 - rght_scaled_q_ext);

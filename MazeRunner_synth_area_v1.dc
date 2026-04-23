@@ -1,5 +1,4 @@
 # MazeRunner_synth_area_v1.dc
-# Variant 1: area-oriented compile knobs with relaxed transition.
 
 # Explicit library setup (LVT target + IO link; avoids your_library.db placeholder).
 set_app_var target_library "/cae/apps/data/saed32_edk-current/lib/stdcell_lvt/db_nldm/saed32lvt_tt0p85v25c.db"

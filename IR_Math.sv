@@ -17,9 +17,9 @@ module IR_math #(
 
 
   logic signed [12:0] lft13, rght13, nom13;
-  assign lft13  = {1'b0, lft_IR};
+  assign lft13 = {1'b0, lft_IR};
   assign rght13 = {1'b0, rght_IR};
-  assign nom13  = {1'b0, NOM_IR};
+  assign nom13 = {1'b0, NOM_IR};
 
   // Collapsed 4-way IR_raw: two 2:1 muxes feeding a single 13-bit subtract.
   //   lft_opn=0, rght_opn=0: lft13 - rght13
@@ -58,6 +58,6 @@ module IR_math #(
   (* keep = "true", syn_keep = 1 *) logic [11:0] dsrd_hdng_adj_buf2;
   assign dsrd_hdng_adj_buf1 = ~dsrd_hdng_adj_pre;
   assign dsrd_hdng_adj_buf2 = ~dsrd_hdng_adj_buf1;
-  assign dsrd_hdng_adj      = dsrd_hdng_adj_buf2;
+  assign dsrd_hdng_adj = dsrd_hdng_adj_buf2;
 
 endmodule

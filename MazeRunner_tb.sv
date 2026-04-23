@@ -70,13 +70,14 @@ module MazeRunner_tb();
 
   always #10 clk = ~clk;
 
+  // Bring all interfaces to a known state, then release reset
   task automatic Initialize();
     begin
-      clk      = 1'b0;
-      RST_n    = 1'b0;
+      clk = 1'b0;
+      RST_n = 1'b0;
       send_cmd = 1'b0;
-      cmd      = 16'h0000;
-      batt     = 12'hD80;
+      cmd = 16'h0000;
+      batt = 12'hD80;
       @(negedge clk);
       @(negedge clk);
       RST_n = 1'b1;
@@ -85,11 +86,12 @@ module MazeRunner_tb();
     end
   endtask
 
+  // Send one 16-bit command through RemoteComm and wait for cmd_sent handshake
   task automatic SendCmd(input [15:0] c);
     int timeout_cnt;
     begin
       @(negedge clk);
-      cmd      = c;
+      cmd = c;
       send_cmd = 1'b1;
       @(negedge clk);
       send_cmd = 1'b0;
@@ -106,6 +108,7 @@ module MazeRunner_tb();
     end
   endtask
 
+  // Wait for DUT response byte and require the expected positive ACK value
   task automatic CheckPosAck();
     int timeout_cnt;
     begin
@@ -126,6 +129,7 @@ module MazeRunner_tb();
     end
   endtask
 
+  // Wait for inertial model setup completion after startup SPI programming
   task automatic WaitForNemoSetup();
     int timeout_cnt;
     begin
@@ -142,6 +146,7 @@ module MazeRunner_tb();
     end
   endtask
 
+  // Wait for calibration completion from inertial_integrator path
   task automatic WaitForCalDone();
     int timeout_cnt;
     begin
@@ -158,6 +163,7 @@ module MazeRunner_tb();
     end
   endtask
 
+  // Utility check for wrapped heading proximity with absolute tolerance
   task automatic CheckHeadingNear(input logic signed [11:0] target, input int tol);
     logic signed [11:0] actual;
     int diff;
@@ -173,10 +179,11 @@ module MazeRunner_tb();
     end
   endtask
 
+  // Verify motors are neutral at reset (no unintended drive torque)
   task automatic CheckPWMsMidrail();
     logic [11:0] lft_d, rght_d;
     begin
-      lft_d  = iDUT.iMTR.lft_duty;
+      lft_d = iDUT.iMTR.lft_duty;
       rght_d = iDUT.iMTR.rght_duty;
       if ((lft_d < 12'h7E0) || (lft_d > 12'h820)) begin
         $display("FAIL: left duty not midrail: 0x%03h", lft_d);
@@ -190,12 +197,14 @@ module MazeRunner_tb();
     end
   endtask
 
+  // For the WEST turn command, validate differential wheel directions
+  // are consistent with a CCW heading correction
   task automatic CheckHeadingTurnDirection();
     logic signed [11:0] lft, rght;
     begin
       // Sample speeds after PID has had time to respond
       repeat (50000) @(posedge clk);
-      lft  = iDUT.lft_spd;
+      lft = iDUT.lft_spd;
       rght = iDUT.rght_spd;
       $display("[%0t] moving=%b lft_spd=%0d rght_spd=%0d lft_duty=0x%03h rght_duty=0x%03h",
                $time, iDUT.moving, lft, rght,
@@ -212,6 +221,7 @@ module MazeRunner_tb();
     end
   endtask
 
+  // Confirm forward motion by watching RunnerPhysics wheel-speed sum ramp up
   task automatic WaitOmegaSumRamp();
     int timeout_cnt;
     begin
@@ -233,9 +243,11 @@ module MazeRunner_tb();
     $display("Starting MazeRunner_tb full system test");
     $display("========================================");
 
+    // Common reset/setup used by all subsequent directed tests
     Initialize();
 
     $display("\n--- Test 1: PWMs at midrail ---");
+    // Let PWM/control loops settle briefly after reset release
     repeat (20) @(posedge clk);
     CheckPWMsMidrail();
 
@@ -243,11 +255,13 @@ module MazeRunner_tb();
     WaitForNemoSetup();
 
     $display("\n--- Test 3: Calibrate ---");
+    // Calibrate command exercises BLE/UART/cmd_proc/inertial pipeline
     SendCmd(16'h0000);
     WaitForCalDone();
     CheckPosAck();
 
     $display("\n--- Test 4: Heading West (0x23FF) ---");
+    // Command heading to WEST and inspect turn dynamics before ACK
     SendCmd(16'h23FF);
     repeat (50000) @(posedge clk);
     $display("moving=%b at_hdng=%b frwrd_spd=%0d",
@@ -264,12 +278,14 @@ module MazeRunner_tb();
              $time, iDUT.actl_hdng);
 
     $display("\n--- Test 5: Heading South (0x27FF) ---");
+    // Back-to-back heading command checks command re-acceptance after RESP
     SendCmd(16'h27FF);
     CheckPosAck();
     $display("[%0t] INFO: post-move heading=0x%03h (target=0x7FF, drift expected after stop)",
              $time, iDUT.actl_hdng);
 
     $display("\n--- Test 6: Move forward (0x4000) ---");
+    // Forward move command; physics model should observe wheel acceleration
     SendCmd(16'h4000);
     WaitOmegaSumRamp();
 
@@ -281,6 +297,7 @@ module MazeRunner_tb();
   end
 
   initial begin
+    // Safety net: prevents hung simulations from running indefinitely
     #100_000_000;
     $display("FAIL: global simulation timeout");
     $stop;

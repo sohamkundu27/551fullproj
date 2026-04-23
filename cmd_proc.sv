@@ -26,12 +26,12 @@ module cmd_proc (
 );
 
     typedef enum logic [2:0] {
-        IDLE  = 3'd0,
-        CAL   = 3'd1,
-        HDNG  = 3'd2,
-        MOVE  = 3'd3,
+        IDLE = 3'd0,
+        CAL = 3'd1,
+        HDNG = 3'd2,
+        MOVE = 3'd3,
         SOLVE = 3'd4,
-        RESP  = 3'd5
+        RESP = 3'd5
     } state_t;
 
     state_t state, nxt_state;

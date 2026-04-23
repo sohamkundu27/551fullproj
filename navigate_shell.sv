@@ -1,6 +1,7 @@
-// navigate_shell.sv
-// Navigation/motion-control FSM.
-// Sequences heading alignment, acceleration/cruise/decel, and move completion.
+///////////////////////////////////////////////////////////////////////////////////////////
+// Navigation/motion-control FSM.                                                       //
+// Sequences heading alignment, acceleration/cruise/decel, and move completion.        //
+////////////////////////////////////////////////////////////////////////////////////////
 module navigate(clk,rst_n,strt_hdng,strt_mv,stp_lft,stp_rght,mv_cmplt,hdng_rdy,moving,
                 en_fusion,at_hdng,lft_opn,rght_opn,frwrd_opn,frwrd_spd);
 
@@ -29,9 +30,7 @@ module navigate(clk,rst_n,strt_hdng,strt_mv,stp_lft,stp_rght,mv_cmplt,hdng_rdy,m
   localparam MAX_FRWRD = 11'h2A0;
   localparam MIN_FRWRD = 11'h0D0;
 
-  ////////////////////////////////////////
-  // frwrd_inc based on FAST_SIM param //
-  //////////////////////////////////////
+  // frwrd_inc based on FAST_SIM parameter
   wire [5:0] frwrd_inc;
 
   generate if (FAST_SIM) begin
@@ -40,9 +39,7 @@ module navigate(clk,rst_n,strt_hdng,strt_mv,stp_lft,stp_rght,mv_cmplt,hdng_rdy,m
     assign frwrd_inc = 6'h02;
   end endgenerate
 
-  ///////////////////////////////
-  // Rising edge detectors    //
-  /////////////////////////////
+  // Rising-edge detectors
   always_ff @(posedge clk, negedge rst_n)
     if (!rst_n) begin
       lft_opn_ff <= 1'b0;
@@ -55,14 +52,10 @@ module navigate(clk,rst_n,strt_hdng,strt_mv,stp_lft,stp_rght,mv_cmplt,hdng_rdy,m
   assign lft_opn_rise = lft_opn & ~lft_opn_ff;
   assign rght_opn_rise = rght_opn & ~rght_opn_ff;
 
-  ////////////////////////
-  // en_fusion signal  //
-  //////////////////////
+  // Enable IR fusion only at moderate forward speed
   assign en_fusion = (frwrd_spd > (MAX_FRWRD >> 1));
 
-  ////////////////////////////////
-  // Now form forward register //
-  //////////////////////////////
+  // Forward-speed register
   always_ff @(posedge clk, negedge rst_n)
     if (!rst_n)
 	  frwrd_spd <= 11'h000;
@@ -76,18 +69,14 @@ module navigate(clk,rst_n,strt_hdng,strt_mv,stp_lft,stp_rght,mv_cmplt,hdng_rdy,m
 	                (frwrd_spd>{4'h0,frwrd_inc,1'b0}) ? frwrd_spd - {4'h0,frwrd_inc,1'b0} :
 					11'h000;
 
-  ///////////////////////
-  // State register   //
-  /////////////////////
+  // State register
   always_ff @(posedge clk, negedge rst_n)
     if (!rst_n)
       state <= IDLE;
     else
       state <= nxt_state;
 
-  ////////////////////////////////////////
-  // Next state and output logic       //
-  //////////////////////////////////////
+  // Next-state and output logic
   always_comb begin
     nxt_state = state;
     moving = 1'b0;

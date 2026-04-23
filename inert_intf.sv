@@ -1,4 +1,4 @@
-//////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
 // Interfaces with ST 6-axis inertial sensor.  In  //
 // this application we only use Z-axis gyro for   //
 // heading of mazeRunner.  Fusion correction     //
@@ -23,25 +23,19 @@ module inert_intf(clk,rst_n,strt_cal,cal_done,heading,rdy,IR_Dtrm,
   output SS_n,SCLK,MOSI;		// SPI outputs
  
 
-  ////////////////////////////////////////////
-  // Declare any needed internal registers //
-  //////////////////////////////////////////
+  // Internal registers.
   logic [15:0] init_tmr;		// waits before the first setup write
   logic INT_ff1, INT_ff2;		// double flop for the sensor interrupt
   logic [7:0] yawL, yawH;		// stores the two bytes from the gyro
   
-  //////////////////////////////////////
-  // Outputs of SM are of type logic //
-  ////////////////////////////////////
+  // State-machine outputs.
   logic wrt;					// starts an SPI transfer
   logic vld;					// pulses when yaw_rt is ready
   logic [15:0] cmd;				// command sent to the SPI block
   logic clr_init_tmr, en_init_tmr;
   logic ld_yawL, ld_yawH;		// load controls for the yaw byte registers
 
-  //////////////////////////////////////////////////////////////
-  // Declare any needed internal signals that connect blocks //
-  ////////////////////////////////////////////////////////////
+  // Internal signals connecting sub-blocks.
   wire done;
   wire [15:0] inert_data;		// Data back from inertial sensor (only lower 8-bits used)
   wire signed [15:0] yaw_rt;
@@ -49,9 +43,7 @@ module inert_intf(clk,rst_n,strt_cal,cal_done,heading,rdy,IR_Dtrm,
   wire INT_synched;
   
   
-  ///////////////////////////////////////
-  // Create enumerated type for state //
-  /////////////////////////////////////
+  // FSM state encoding.
   typedef enum logic [3:0] {
     RST_WAIT,
     INIT1, INIT1_WAIT,
@@ -64,17 +56,12 @@ module inert_intf(clk,rst_n,strt_cal,cal_done,heading,rdy,IR_Dtrm,
   } state_t;
   state_t state, nxt_state;
   
-  ////////////////////////////////////////////////////////////
-  // Instantiate SPI monarch for Inertial Sensor interface //
-  //////////////////////////////////////////////////////////
+  // SPI interface to inertial sensor
   SPI_mnrch iSPI(.clk(clk),.rst_n(rst_n),.SS_n(SS_n),.SCLK(SCLK),
                  .MISO(MISO),.MOSI(MOSI),.wrt(wrt),.done(done),
 				 .rd_data(inert_data),.wt_data(cmd));
 				  
-  ////////////////////////////////////////////////////////////////////
-  // Instantiate Angle Engine that takes in angular rate readings  //
-  // and gaurdrail info and produces a heading reading            //
-  /////////////////////////////////////////////////////////////////
+  // Angle engine combines gyro + fusion correction into heading
   inertial_integrator #(FAST_SIM) iINT(.clk(clk), .rst_n(rst_n), .strt_cal(strt_cal),
                         .vld(vld),.rdy(rdy),.cal_done(cal_done), .yaw_rt(yaw_rt),.moving(moving),
 						.en_fusion(en_fusion),.IR_Dtrm(IR_Dtrm),.heading(heading));
@@ -89,9 +76,7 @@ module inert_intf(clk,rst_n,strt_cal,cal_done,heading,rdy,IR_Dtrm,
   // The FSM only uses the synchronized version of INT
   assign INT_synched = INT_ff2;
 
-  ////////////////////////
-  // Infer State Flops //
-  //////////////////////
+  // State register
   always_ff @(posedge clk or negedge rst_n)
     if (!rst_n)
       state <= RST_WAIT;
@@ -127,13 +112,9 @@ module inert_intf(clk,rst_n,strt_cal,cal_done,heading,rdy,IR_Dtrm,
     end
   end
 
-  //////////////////////////////////////
-  // state transition & output logic //
-  ////////////////////////////////////
+  // Next-state and output logic.
   always_comb begin
-    //////////////////////
-    // Default outputs //
-    ////////////////////
+    // Default outputs.
     nxt_state = state;
     wrt = 1'b0;
     vld = 1'b0;
@@ -244,7 +225,4 @@ module inert_intf(clk,rst_n,strt_cal,cal_done,heading,rdy,IR_Dtrm,
       end
     endcase
   end
-  
-  
- 
 endmodule

@@ -75,7 +75,7 @@ always_comb begin
 end
 
 // shift logic when baud_cnt reaches 0
-assign shift   = receiving && (baud_cnt == 12'd0);
+assign shift = receiving && (baud_cnt == 12'd0);
 // set_rdy is asserted when the last bit is received
 assign set_rdy = shift && (bit_cnt == 4'd9);
 

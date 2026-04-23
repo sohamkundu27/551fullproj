@@ -1,9 +1,10 @@
-// navigate_tb_starter.sv
-// Unit testbench for the navigate FSM.
-// Drives heading/move commands and checks movement-state behavior.
+///////////////////////////////////////////////////////////////////////
+// Unit testbench for the navigate FSM.                             //
+// Drives heading/move commands and checks movement-state behavior.//
+////////////////////////////////////////////////////////////////////
 module navigate_tb();
 
-  //// Declare stimulus as type reg ////
+  // Stimulus signals
   reg clk,rst_n;			// 50MHz clock and asynch active low reset
   reg strt_hdng;			// indicates to start a new heading sequence
   reg strt_mv;				// indicates a new forward movement occurring
@@ -11,11 +12,11 @@ module navigate_tb();
   reg stp_rght;				// indicates move should stop at a right opening
   reg hdng_rdy;				// used to pace frwrd_spd increments
   reg at_hdng;				// asserted by PID when new heading is close enough
-  reg lft_opn;				// from IR sensor....indicates opening in maze to left
-  reg rght_opn;				// from IR sensor....indicates opening in maze to right
-  reg frwrd_opn;			// from IR sensor....indicates opening in front
+  reg lft_opn;				// from IR sensor, indicates opening in maze to left
+  reg rght_opn;				// from IR sensor, indicates opening in maze to right
+  reg frwrd_opn;			// from IR sensor, indicates opening in front
   
-  //// declare outputs monitored of type wire ////
+  // Observed DUT outputs
   wire mv_cmplt;			// should be asserted at end of move
   wire moving;				// should be asserted at all times not in IDLE
   wire en_fusion;			// should be asserted whenever frwrd_spd>MAX_FRWRD/2
@@ -25,9 +26,7 @@ module navigate_tb();
   localparam MIN_FRWRD = 11'h0D0;		// minimum duty at which wheels will turn
   localparam MAX_FRWRD = 11'h2A0;		// max forward speed
   
-  //////////////////////
-  // Instantiate DUT //
-  ////////////////////
+  // Instantiate DUT
   navigate #(FAST_SIM) iDUT(.clk(clk),.rst_n(rst_n),.strt_hdng(strt_hdng),.strt_mv(strt_mv),
                 .stp_lft(stp_lft),.stp_rght(stp_rght),.mv_cmplt(mv_cmplt),.hdng_rdy(hdng_rdy),
 				.moving(moving),.en_fusion(en_fusion),.at_hdng(at_hdng),.lft_opn(lft_opn),
@@ -51,9 +50,7 @@ module navigate_tb();
 	
 	assert (!moving) $display("GOOD0: moving should not be asserted when IDLE");
 	else $error("ERR0: why is moving asserted now?");	
-	//////////////////////////////////////////////
-	// First testcase will be a heading change //
-	////////////////////////////////////////////
+	// Test 1: heading change
 	strt_hdng = 1;
 	@(negedge clk);
 	strt_hdng = 0;
@@ -67,9 +64,7 @@ module navigate_tb();
 	@(negedge clk);
 	at_hdng = 0;
 	
-	///////////////////////////////////////////////////////////////////////////////////
-	// Second testcase will be move forward looking for lft_opn, but hit wall first //
-	/////////////////////////////////////////////////////////////////////////////////
+	// Test 2: forward move with left-stop mode, but front wall forces fast decel
 	strt_mv = 1;
 	@(negedge clk);
 	strt_mv = 0;
@@ -82,13 +77,13 @@ module navigate_tb();
 	assert (frwrd_spd===MIN_FRWRD+11'h018) $display("GOOD5: frwrd spd should have incrementd to MIN_FRWRD+0x018");
 	else $error("ERR5: expecting frwrd_spd to have incremented by 0x018 at time %t",$time);	
 	
-	/// Now lower hdng_rdy to ensure frwrd_spd does not increment ////
+	// Lower hdng_rdy to ensure frwrd_spd does not increment
 	hdng_rdy = 0;
 	@(negedge clk);
 	assert (frwrd_spd===MIN_FRWRD+11'h018) $display("GOOD6: frwrd spd should still be MIN_FRWRD+0x018");
 	else $error("ERR6: expecting frwrd_spd to have maintained at MIN_FRWRD+0x018");	
 	
-	/// Now raise hdng_rdy back up
+	// Raise hdng_rdy again
 	hdng_rdy = 1;
 	@(negedge clk);
 	assert (moving) $display("GOOD7: moving should still be asserted");
@@ -96,26 +91,23 @@ module navigate_tb();
 	assert (frwrd_spd===MIN_FRWRD+11'h030) $display("GOOD8: frwrd spd should have incremented to MIN_FRWRD+0x030");
 	else $error("ERR8: expecting frwrd_spd to have incremented to MIN_FRWRD+0x030 at time %t",$time);
 	
-	/// Now let it increment 6 more times (so 9 in total) ////
+	// Let it increment 6 more times (9 total)
 	repeat(6) @(negedge clk);
 	
-	/// Now let it know it has an obstacle in front ////
+	// Inject obstacle in front
 	frwrd_opn = 0;
 	repeat(2) @(negedge clk);
 	assert (frwrd_spd===MIN_FRWRD+11'h018) $display("GOOD9: frwrd spd should have decremented fast to MIN_FRWRD+0x018");
 	else $error("ERR9: expecting a fast decrement of frwrd_spd at time %t",$time);	
 	
-	/// Now check that it properly decrements to zero ////
+	// Check that it decrements to zero
 	repeat(2) @(negedge clk);
 	assert (frwrd_spd===11'h000) $display("GOOD10: frwrd spd should be zero now");
 	else $error("ERR10: expecting frwrd_spd to have decremented to zero by time %t",$time);	
 	assert (mv_cmplt) $display("GOOD11: mv_cmplt should be asserted when speed hits zero");
 	else $error("ERR11: expecting mv_cmplt to be asserted at time %t",$time);	
 	
-	///////////////////////////////////////////////////////////////////////////
-	// Third testcase: move with left opening stop (normal decel)           //
-	//   Also checks en_fusion                                             //
-	/////////////////////////////////////////////////////////////////////////
+	// Test 3: left-opening stop with normal decel; also checks en_fusion
 	@(negedge clk);
 	frwrd_opn = 1;
 	stp_lft = 1;
@@ -155,9 +147,7 @@ module navigate_tb();
 	assert (!en_fusion) $display("GOOD18: en_fusion de-asserted at zero speed");
 	else $error("ERR18: en_fusion should be off at zero speed");
 
-	///////////////////////////////////////////////////////////////////////////
-	// Fourth testcase: move with right opening stop (normal decel)         //
-	/////////////////////////////////////////////////////////////////////////
+	// Test 4: right-opening stop with normal decel
 	@(negedge clk);
 	frwrd_opn = 1;
 	stp_lft = 0;
@@ -182,10 +172,7 @@ module navigate_tb();
 	assert (mv_cmplt) $display("GOOD21: mv_cmplt asserted after right opening stop");
 	else $error("ERR21: expecting mv_cmplt at time %t", $time);
 
-	///////////////////////////////////////////////////////////////////////////
-	// Fifth testcase: opening already asserted before move starts          //
-	//   Verify rising edge detector prevents immediate stop                //
-	/////////////////////////////////////////////////////////////////////////
+	// Test 5: opening already high before move; rising-edge detector check
 	@(negedge clk);
 	frwrd_opn = 1;
 	stp_lft = 1;
@@ -220,10 +207,7 @@ module navigate_tb();
 	assert (mv_cmplt) $display("GOOD26: mv_cmplt asserted after edge-detect stop");
 	else $error("ERR26: expecting mv_cmplt at time %t", $time);
 
-	///////////////////////////////////////////////////////////////////////////
-	// Sixth testcase: back-to-back commands                                //
-	//   Heading change immediately followed by a forward move              //
-	/////////////////////////////////////////////////////////////////////////
+	// Test 6: back-to-back commands (heading then forward move)
 	@(negedge clk);
 	lft_opn = 0;
 

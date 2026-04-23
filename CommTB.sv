@@ -68,7 +68,7 @@ module CommTB;
   // One-cycle send pulse carrying a 16-bit command.
   task automatic pulse_snd_cmd(input logic [15:0] cmd_in);
     begin
-      rem_cmd     = cmd_in;
+      rem_cmd = cmd_in;
       rem_snd_cmd = 1'b1;
       @(posedge clk);
       rem_snd_cmd = 1'b0;
@@ -158,12 +158,12 @@ module CommTB;
     logic [15:0] rand_cmd;
     logic [7:0]  rand_ack;
 
-    rst_n            = 1'b0;
-    rem_snd_cmd      = 1'b0;
-    rem_cmd          = 16'h0000;
-    wrp_clr_cmd_rdy  = 1'b0;
-    wrp_trmt         = 1'b0;
-    wrp_resp         = 8'h00;
+    rst_n = 1'b0;
+    rem_snd_cmd = 1'b0;
+    rem_cmd = 16'h0000;
+    wrp_clr_cmd_rdy = 1'b0;
+    wrp_trmt = 1'b0;
+    wrp_resp = 8'h00;
 
     repeat (5) @(posedge clk);
     rst_n = 1'b1;
