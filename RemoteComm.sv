@@ -18,15 +18,19 @@ module RemoteComm (
     logic [7:0] low_byte;   // holding register for cmd[7:0]
     logic trmt;     // start transmission pulse to UART
     logic tx_done;      // UART finished transmitting
+    logic clr_rx_rdy;   // clear stale received-byte flag before new command
     logic sel_high;    // select high byte of cmd to load into tx_data
     logic set_cmd_snt;    // pulse to set cmd_snt when full command has been sent
     logic cmd_snt_ff;   // indicates full command has been sent
 
     // Instantiate UART
     UART iUART(.clk(clk), .rst_n(rst_n), .RX(RX), .TX(TX), .rx_rdy(resp_rdy),
-                .clr_rx_rdy(1'b0), // rx_rdy will be cleared by new start bit, so tie clr_rx_rdy to 0
+                .clr_rx_rdy(clr_rx_rdy),
                 .rx_data(resp), .trmt(trmt),
                 .tx_data(tx_data), .tx_done(tx_done));
+
+    // Drop any prior response-ready sticky flag when a new command starts.
+    assign clr_rx_rdy = snd_cmd;
     
     // Holding register for high byte of command
     always_ff @(posedge clk) begin
