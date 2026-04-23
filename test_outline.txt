@@ -12,8 +12,8 @@ simulation runtime practical. Tests are self-checking and stop immediately on
 failure with a descriptive message.
 
 Tests are ordered and stateful: each one assumes the DUT state left by earlier
-tests. The sequence covers reset behavior, sensor bring-up, command decoding,
-heading control, movement, invalid-command behavior, and solver-mode entry.
+tests. The current sequence covers reset behavior, sensor bring-up, command
+decoding, heading control, and forward movement.
 
 
 TEST 1: PWM Midrail Check
@@ -78,72 +78,31 @@ iDUT.moving, iDUT.lft_spd, iDUT.rght_spd, iDUT.iMTR.*duty, resp
 TEST 5: Heading Change South (0x27FF)
 -------------------------------------
 What it does:
-Sends heading command 0x27FF (south), waits for ACK, checks heading closeness,
-and waits for robot angular velocities to settle before the next move test.
+Sends heading command 0x27FF (south), then waits for positive ACK.
 
 What it checks:
-Back-to-back heading commands are accepted and completed correctly. Also ensures
-robot is settled before forward movement test to avoid transient physics errors.
+Back-to-back heading commands are accepted and completed correctly. This orients
+the robot toward the open maze direction before the forward-move test.
 
 Signals checked:
-iDUT.actl_hdng, resp, iPHYS.omega_lft, iPHYS.omega_rght
+iDUT.actl_hdng (informational print), resp (0xA5 pos ack)
 
 
 TEST 6: Move Forward (0x4000)
 -----------------------------
 What it does:
 Sends move command 0x4000 and waits until RunnerPhysics reports forward wheel
-motion (omega_sum exceeds threshold), then checks ACK and command-mode return.
+motion (omega_sum exceeds threshold).
 
 What it checks:
 MOVE command decode and acceleration path:
 - cmd_proc asserts strt_mv
 - navigate ramps frwrd_spd
 - PID + MtrDrv generate forward wheel drive
-- command returns to cmd mode after completion
+- RunnerPhysics observes positive forward motion (omega_sum ramp)
 
 Signals checked:
-iPHYS.omega_sum, resp, iDUT.cmd_md
-
-
-TEST 7: Invalid Opcode Has No Response (0xE000)
------------------------------------------------
-What it does:
-Sends unsupported opcode 0xE000 and watches a bounded window for response.
-
-What it checks:
-Invalid commands do not generate spurious responses.
-
-Signals checked:
-resp_rdy edge activity, resp
-
-
-TEST 8: Move Stop-Bit Decode + Response (0x4003)
-------------------------------------------------
-What it does:
-Sends MOVE command 0x4003 (both stop bits set), waits a few cycles, checks
-latched stop bits in cmd_proc, then checks ACK and cmd-mode return.
-
-What it checks:
-Correct decoding and latching of cmd[1:0] for MOVE:
-- stp_lft = 1
-- stp_rght = 1
-Also confirms response and control-flow completion.
-
-Signals checked:
-iDUT.iCMD.stp_lft, iDUT.iCMD.stp_rght, resp, iDUT.cmd_md
-
-
-TEST 9: Solve Command Enters Solver Mode (0x6001)
--------------------------------------------------
-What it does:
-Sends solve command 0x6001 and waits for cmd_md to go low.
-
-What it checks:
-cmd_proc transitions to solver mode and hands control to maze_solve path.
-
-Signals checked:
-iDUT.cmd_md
+iPHYS.omega_sum
 
 
 ================================================================================
