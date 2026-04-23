@@ -111,14 +111,21 @@ module MazeRunner_tb();
   // Wait for DUT response byte and require the expected positive ACK value
   task automatic CheckPosAck();
     int timeout_cnt;
+    logic prev_resp_rdy;
+    logic saw_new_resp;
     begin
+      prev_resp_rdy = resp_rdy;
+      saw_new_resp = 1'b0;
       timeout_cnt = 0;
-      while (!resp_rdy && timeout_cnt < 500_000) begin
+      while (!saw_new_resp && timeout_cnt < 500_000) begin
         @(posedge clk);
+        if (!prev_resp_rdy && resp_rdy)
+          saw_new_resp = 1'b1;
+        prev_resp_rdy = resp_rdy;
         timeout_cnt++;
       end
-      if (!resp_rdy) begin
-        $display("FAIL: resp_rdy never asserted (timeout)");
+      if (!saw_new_resp) begin
+        $display("FAIL: new resp_rdy event never observed (timeout)");
         $stop;
       end
       if (resp !== 8'hA5) begin
@@ -242,14 +249,17 @@ module MazeRunner_tb();
   // Useful for invalid/unsupported command coverage.
   task automatic CheckNoRespWindow(input int max_cycles, input [255:0] label);
     int timeout_cnt;
+    logic prev_resp_rdy;
     begin
+      prev_resp_rdy = resp_rdy;
       timeout_cnt = 0;
       while (timeout_cnt < max_cycles) begin
         @(posedge clk);
-        if (resp_rdy) begin
+        if (!prev_resp_rdy && resp_rdy) begin
           $display("FAIL: unexpected response 0x%02h during %0s", resp, label);
           $stop;
         end
+        prev_resp_rdy = resp_rdy;
         timeout_cnt++;
       end
       $display("[%0t] PASS: no response observed during %0s", $time, label);
