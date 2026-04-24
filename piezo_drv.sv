@@ -70,6 +70,8 @@ logic note_done;
 always_ff @(posedge clk, negedge rst_n) begin
 	if (!rst_n) // reset note counter on reset
 		note_cnt <= 0;
+	else if (state == IDLE)
+		note_cnt <= 0;
 	else if (note_cnt >= curr_note_dur) // reset note counter at end of note duration to prepare for next note
 		note_cnt <= 0;
 	else if (!note_done) // increments note count if not is not done
@@ -101,8 +103,6 @@ end
 always_ff @(posedge clk, negedge rst_n) begin
 	if (!rst_n) // reset to IDLE on reset	
 		state <= IDLE;
-	else if (state == IDLE)
-			note_down <= 0;
 	else // update state to next state every clock cycle
 		state <= nxt_state;
 end
