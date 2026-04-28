@@ -1,9 +1,22 @@
-# MazeRunner_synth_area_v1.dc
+# -------------------------------------------------------------------------
+# Synopsys Design Compiler (DC) Script for MazeRunner
+# -------------------------------------------------------------------------
 
-# Explicit library setup (LVT target + IO link; avoids your_library.db placeholder).
+# =========================================================================
+# 1. Library Setup
+# =========================================================================
+# Using SAED LVT library
+# contains the standard cells used to build the circuit
 set_app_var target_library "/cae/apps/data/saed32_edk-current/lib/stdcell_lvt/db_nldm/saed32lvt_tt0p85v25c.db"
+
+# The link library includes the target library, plus any memory macros, IP, or IO cells.
+# DC uses this to resolve instantiated references (like IO pads) in the RTL.
 set_app_var link_library   "* $target_library /cae/apps/data/saed32_edk-current/lib/io_std/db_nldm/saed32io_wb_tt1p05v25c_2p5v.db"
 
+# =========================================================================
+# 2. Read RTL Design Files
+# =========================================================================
+# Read all SystemVerilog source files into memory. 
 read_file -format sverilog reset_synch.sv
 read_file -format sverilog UART_tx.sv
 read_file -format sverilog UART_rx.sv
@@ -27,33 +40,96 @@ read_file -format sverilog sensor_intf.sv
 read_file -format sverilog piezo_drv.sv
 read_file -format sverilog MazeRunner.sv
 
+# =========================================================================
+# 3. Elaboration and Linking
+# =========================================================================
+# Set the top-level module of the design.
 set current_design MazeRunner
+
+# Resolve all module instantiations and link the design to the specified libraries.
 link
 
+# =========================================================================
+# 4. Timing Constraints
+# =========================================================================
+# Define the main system clock. 
+# Target period is 2.75 ns (approx. 363.6 MHz).
 create_clock -name "clk" -period 2.75 [get_ports clk]
+
+# Model real-world clock skew.
+# DC will try to meet setup/hold times 0.125 ns earlier/later than strictly necessary.
 set_clock_uncertainty -setup 0.125 [get_clocks clk]
 set_clock_uncertainty -hold  0.125 [get_clocks clk]
+
+# Assume external signals arrive 0.6 ns after the clock edge.
+# Applied to all inputs EXCEPT the clock itself.
 set_input_delay  0.6 -clock clk [remove_from_collection [all_inputs] [get_ports clk]]
+
+# Assume external logic needs the output data 0.5 ns before the next clock edge.
 set_output_delay 0.5 -clock clk [all_outputs]
+
+# =========================================================================
+# 5. Environment & Electrical Constraints
+# =========================================================================
+# Model the drive strength of the external logic driving this chip's inputs.
+# Here, we assume a standard NAND2X1 gate is driving every input (except the clock).
 set_driving_cell -lib_cell NAND2X1_LVT -library saed32lvt_tt0p85v25c [remove_from_collection [all_inputs] [get_ports clk]]
+
+# Model the capacitive load that this chip's outputs must drive.
+# 0.1 pF (picofarads) load applied to all outputs.
 set_load         0.1                [all_outputs]
+
+# Estimate the RC delays of interconnect wires before physical routing.
+# Uses a pre-defined lookup table named "16000" from the SAED32 library.
 set_wire_load_model -name 16000 -library saed32lvt_tt0p85v25c
+
+# Prevent signals from transitioning too slowly (limits rise/fall time to 0.125 ns maximum).
 set_max_transition 0.125 [current_design]
 
+# =========================================================================
+# 6. Synthesis and Optimization Strategy
+# =========================================================================
+# First pass compile: Synthesize RTL to gates, pushing hard to minimize area.
 compile -map_effort medium -area_effort high
+
+# Remove all module hierarchy (flatten the design). 
+# This allows the tool to optimize logic across module boundaries.
 ungroup -all -flatten
+
+# Second pass compile: Re-optimize the flattened design for maximum area reduction.
 compile -map_effort medium -area_effort high
+
+# Tell the tool to actively insert buffers to fix fast-path (hold time) violations.
 set_fix_hold [get_clocks clk]
+
+# Final incremental compile: Fix hold violations and finalize timing without major restructuring.
 compile -incremental -map_effort medium
 
+# =========================================================================
+# 7. Reporting
+# =========================================================================
+# Generate reports to check if constraints were met.
+# Hold time report (fastest paths)
 report_timing -delay min > MazeRunner_timing_min_v1.rpt
+# Setup time report (slowest paths)
 report_timing -delay max > MazeRunner_timing_max_v1.rpt
+# Detailed setup time report for the 5 worst paths
 report_timing -delay max -max_paths 5 > MazeRunner_timing_v1.rpt
+
+# General area breakdown report
 report_area > MazeRunner_area_v1.rpt
+# Area breakdown by module hierarchy (Note: less useful here since we flattened the design!)
 report_area -hierarchy > MazeRunner_area_hier_v1.rpt
 
+# =========================================================================
+# 8. Output Files
+# =========================================================================
+# Export the synthesized gate-level netlist in Verilog format.
 write -format verilog -hierarchy -output MazeRunner_v1.vg
+
+# Export the Standard Delay Format (SDF) file containing gate and wire delays.
+# Used for post-synthesis (gate-level) timing simulation.
 write_sdf MazeRunner_v1.sdf
 
+# Exit Design Compiler
 exit
-
